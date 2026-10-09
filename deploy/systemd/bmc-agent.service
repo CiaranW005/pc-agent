@@ -1,0 +1,22 @@
+[Unit]
+Description=BMC PC Agent
+Wants=network-online.target bmc-agent-update.service
+After=network-online.target bmc-agent-update.service
+
+[Service]
+Type=simple
+User=bmc-agent
+Group=bmc-agent
+
+ExecStart=/usr/local/bin/bmc-agent
+
+Restart=on-failure
+RestartSec=5
+
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
