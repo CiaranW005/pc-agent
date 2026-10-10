@@ -1,6 +1,10 @@
 package executor
 
-import "os/exec"
+import (
+	"fmt"
+	"os/exec"
+	"strings"
+)
 
 type Executor struct{}
 
@@ -9,9 +13,17 @@ func NewExecutor() *Executor {
 }
 
 func (e *Executor) Shutdown() error {
-	return exec.Command("systemctl", "poweroff").Run()
+	output, err := exec.Command("systemctl", "poweroff").CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("Shutdown failed: %w: %s", err, strings.TrimSpace(string(output)))
+	}
+	return nil
 }
 
 func (e *Executor) Restart() error {
-	return exec.Command("systemctl", "reboot").Run()
+	output, err := exec.Command("systemctl", "reboot").CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("Reboot failed: %w: %s", err, strings.TrimSpace(string(output)))
+	}
+	return nil
 }

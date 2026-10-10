@@ -62,9 +62,12 @@ func (m *Manager) listen(handler func(protocol.PacketVariant) func() error) {
 			return
 		}
 
+		fmt.Printf("Received packet: %T\n", packet)
+
 		operation := handler(packet)
 
 		if operation == nil {
+			fmt.Printf("No handler for packet: %T\n", packet)
 			continue
 		}
 
@@ -80,11 +83,18 @@ func (m *Manager) listen(handler func(protocol.PacketVariant) func() error) {
 		}
 
 		if err := operation(); err != nil {
-			m.Send(protocol.NewAcknowledgement(
+			fmt.Printf("Command failed: %T: %v\n", packet, err)
+
+			if sendErr := m.Send(protocol.NewAcknowledgement(
 				uint64(time.Now().UnixMilli()),
 				protocol.AckError,
 				err.Error(),
-			))
+			)); sendErr != nil {
+				fmt.Println("Failed to send error acknowledgment:", sendErr)
+				return
+			}
+
+			continue
 		}
 	}
 }

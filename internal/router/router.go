@@ -1,6 +1,8 @@
 package router
 
 import (
+	"fmt"
+
 	"github.com/CiaranW005/go-protocol"
 	"github.com/CiaranW005/pc-agent/internal/executor"
 )
@@ -26,6 +28,8 @@ func (r *Router) Handle(packet protocol.PacketVariant) func() error {
 }
 
 func (r *Router) handleMessage(message protocol.Message) func() error {
+	fmt.Printf("Received Message: %T\n", message.Type)
+
 	switch message.Type {
 	case protocol.TypeReset:
 		return r.executor.Restart
