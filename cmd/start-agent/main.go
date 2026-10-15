@@ -10,8 +10,8 @@ import (
 
 func main() {
 	exec := executor.NewExecutor()
-	handler := router.NewRouter(exec)
 	manager := connection.NewManager()
+	handler := router.NewRouter(exec, manager.Tracker())
 
 	defer manager.CloseSession()
 

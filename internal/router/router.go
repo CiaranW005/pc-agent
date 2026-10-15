@@ -2,6 +2,7 @@ package router
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/CiaranW005/go-protocol"
 	"github.com/CiaranW005/pc-agent/internal/executor"
@@ -9,22 +10,43 @@ import (
 
 type Router struct {
 	executor *executor.Executor
+	tracker  *protocol.AckTracker
+	dedup    *protocol.Deduplicator
 }
 
-func NewRouter(e *executor.Executor) *Router {
-	return &Router{executor: e}
+func NewRouter(
+	e *executor.Executor,
+	t *protocol.AckTracker,
+) *Router {
+	return &Router{
+		executor: e,
+		tracker:  t,
+		dedup:    protocol.NewDeduplicator(5 * time.Minute),
+	}
 }
 
-func (r *Router) Handle(packet protocol.PacketVariant) func() error {
+func (r *Router) Handle(packet protocol.PacketVariant) (func() error, bool) {
 	switch p := packet.(type) {
 	case protocol.Message:
-		return r.handleMessage(p)
+		operation := r.handleMessage(p)
+
+		if operation == nil {
+			return func() error { return nil }, false
+		}
+
+		if r.dedup.IsDuplicate(p.ID) {
+			return func() error { return nil }, true
+		}
+
+		return operation, true
 
 	case protocol.Acknowledgement:
-		return nil
-	}
+		r.tracker.Acknowledgement(p)
+		return nil, true
 
-	return nil
+	default:
+		return nil, false
+	}
 }
 
 func (r *Router) handleMessage(message protocol.Message) func() error {
