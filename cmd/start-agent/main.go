@@ -11,7 +11,7 @@ import (
 func main() {
 	exec := executor.NewExecutor()
 	manager := connection.NewManager()
-	handler := router.NewRouter(exec, manager.Tracker())
+	handler := router.NewRouter(exec, manager.Tracker(), manager.SendTracked)
 
 	defer manager.CloseSession()
 

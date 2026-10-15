@@ -134,7 +134,7 @@ func (m *Manager) listen(handler func(protocol.PacketVariant) (func() error, boo
 			fmt.Printf("Command failed: %T: %v\n", packet, err)
 
 			response := protocol.NewMessage(
-				protocol.TypeCommandResult,
+				packet.(protocol.Message).Type,
 				protocol.CommandResult{
 					Success: false,
 					Error:   err.Error(),

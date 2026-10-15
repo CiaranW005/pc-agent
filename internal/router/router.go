@@ -6,22 +6,28 @@ import (
 
 	"github.com/CiaranW005/go-protocol"
 	"github.com/CiaranW005/pc-agent/internal/executor"
+	"github.com/CiaranW005/pc-agent/internal/telemetry"
 )
 
 type Router struct {
-	executor *executor.Executor
-	tracker  *protocol.AckTracker
-	dedup    *protocol.Deduplicator
+	executor    *executor.Executor
+	tracker     *protocol.AckTracker
+	dedup       *protocol.Deduplicator
+	telemetry   *telemetry.Manager
+	sendTracked func(protocol.Message, protocol.RetryPolicy) error
 }
 
 func NewRouter(
 	e *executor.Executor,
 	t *protocol.AckTracker,
+	sendTracked func(protocol.Message, protocol.RetryPolicy) error,
 ) *Router {
 	return &Router{
-		executor: e,
-		tracker:  t,
-		dedup:    protocol.NewDeduplicator(5 * time.Minute),
+		executor:    e,
+		tracker:     t,
+		dedup:       protocol.NewDeduplicator(5 * time.Minute),
+		telemetry:   telemetry.NewManager(),
+		sendTracked: sendTracked,
 	}
 }
 
@@ -60,7 +66,22 @@ func (r *Router) handleMessage(message protocol.Message) func() error {
 		return r.executor.Shutdown
 
 	case protocol.TypeTelemetry:
-		return nil
+		return func() error {
+			response, err := r.telemetry.Collect()
+			if err != nil {
+				return err
+			}
+
+			response.ReplyTo = message.ID
+
+			return r.sendTracked(
+				response,
+				protocol.RetryPolicy{
+					Timeout:    time.Second,
+					MaxRetries: 1,
+				},
+			)
+		}
 
 	default:
 		return nil

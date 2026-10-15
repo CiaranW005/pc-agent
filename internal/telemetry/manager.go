@@ -11,10 +11,12 @@ func NewManager() *Manager {
 }
 
 func (m *Manager) Collect() (protocol.Message, error) {
-	data := "some_data"
-
 	return protocol.NewMessage(
 		protocol.TypeTelemetry,
-		data,
+		struct {
+			PC bool `json:"pc"`
+		}{
+			PC: true,
+		},
 	), nil
 }
