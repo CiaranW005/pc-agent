@@ -67,6 +67,8 @@ func (m *Manager) StartSession(address string, handler func(protocol.PacketVaria
 
 	go m.tracker.Run(ctx)
 
+	// Handle one connection at a time. Accept the next connection only after
+	// the current session ends and its pending acknowledgements are cleared.
 	for {
 		conn, err := listener.Accept()
 		if err != nil {
@@ -107,6 +109,8 @@ func (m *Manager) listen(handler func(protocol.PacketVariant) (func() error, boo
 
 		fmt.Printf("Received packet: %T\n", packet)
 
+		// The handler returns a deferred operation and whether the packet was accepted.
+		// A nil operation skips acknowledgement and execution.
 		operation, success := handler(packet)
 
 		ackType := protocol.AckOk
@@ -119,6 +123,8 @@ func (m *Manager) listen(handler func(protocol.PacketVariant) (func() error, boo
 			continue
 		}
 
+		// Acknowledge before executing because shutdown or reboot may disconnect
+		// the agent before another packet can be sent.
 		ack := protocol.NewAcknowledgement(
 			packet.GetID(),
 			ackType,
@@ -129,7 +135,8 @@ func (m *Manager) listen(handler func(protocol.PacketVariant) (func() error, boo
 			return
 		}
 
-		// Send a result if the operation fails
+		// Report execution failures explicitly. Successful shutdown and reboot
+		// requests do not produce a completion response.
 		if err := operation(); err != nil {
 			fmt.Printf("Command failed: %T: %v\n", packet, err)
 
@@ -162,8 +169,11 @@ func (m *Manager) Send(packet protocol.PacketVariant) error {
 		return err
 	}
 
+	// Delimit JSON packets with newlines so the receiver can separate messages
+	// even when TCP combines or splits writes.
 	data = append(data, '\n')
 
+	// Only let one goroutine send at a time so two packets cannot get mixed together.
 	m.writeMu.Lock()
 	defer m.writeMu.Unlock()
 
@@ -179,6 +189,8 @@ func (m *Manager) SendTracked(
 	message protocol.Message,
 	policy protocol.RetryPolicy,
 ) error {
+	// Register before sending so an immediate acknowledgement can be matched.
+	// Cancel tracking if the initial send fails.
 	if err := m.tracker.Track(message, policy); err != nil {
 		return err
 	}

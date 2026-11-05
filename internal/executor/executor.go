@@ -13,6 +13,8 @@ func NewExecutor() *Executor {
 }
 
 func (e *Executor) Shutdown() error {
+	// Request shutdown through systemd. The service account must be authorized
+	// to perform this action. A nil error confirms the request, not shutdown completion.
 	output, err := exec.Command("systemctl", "poweroff").CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("Shutdown failed: %w: %s", err, strings.TrimSpace(string(output)))
@@ -21,6 +23,8 @@ func (e *Executor) Shutdown() error {
 }
 
 func (e *Executor) Restart() error {
+	// Request restart through systemd. The service account must be authorized
+	// to perform this action. A nil error confirms the request, not restart completion.
 	output, err := exec.Command("systemctl", "reboot").CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("Reboot failed: %w: %s", err, strings.TrimSpace(string(output)))

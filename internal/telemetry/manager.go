@@ -11,6 +11,8 @@ func NewManager() *Manager {
 }
 
 func (m *Manager) Collect() (protocol.Message, error) {
+	// Collect currently reports agent availability only.
+	// A running agent returns pc=true; no hardware metrics are collected.
 	return protocol.NewMessage(
 		protocol.TypeTelemetry,
 		struct {

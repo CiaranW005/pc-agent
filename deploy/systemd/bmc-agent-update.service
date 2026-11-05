@@ -4,6 +4,8 @@ Wants=network-online.target
 After=network-online.target
 Before=bmc-agent.service
 
+# Run as root to read the GitHub token and replace the installed executable.
+# This unit performs one update attempt; it does not schedule periodic checks.
 [Service]
 Type=oneshot
 ExecStart=/usr/local/libexec/bmc-agent/update.sh

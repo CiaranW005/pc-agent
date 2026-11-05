@@ -1,5 +1,7 @@
 [Unit]
 Description=BMC PC Agent
+# Attempt an update before starting the agent.
+# Wants allows the installed agent to start even if the updater fails.
 Wants=network-online.target bmc-agent-update.service
 After=network-online.target bmc-agent-update.service
 

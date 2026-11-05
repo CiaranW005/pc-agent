@@ -31,15 +31,21 @@ func NewRouter(
 	}
 }
 
+// Handle selects an operation without executing it.
+// The connection manager acknowledges the packet before running the operation.
 func (r *Router) Handle(packet protocol.PacketVariant) (func() error, bool) {
 	switch p := packet.(type) {
 	case protocol.Message:
 		operation := r.handleMessage(p)
 
+		// Return a no-op with false so the connection manager sends an error
+		// acknowledgement without executing a command.
 		if operation == nil {
 			return func() error { return nil }, false
 		}
 
+		// Acknowledge duplicate commands again, but do not execute them again
+		// within the five-minute deduplication window.
 		if r.dedup.IsDuplicate(p.ID) {
 			return func() error { return nil }, true
 		}
@@ -47,6 +53,7 @@ func (r *Router) Handle(packet protocol.PacketVariant) (func() error, bool) {
 		return operation, true
 
 	case protocol.Acknowledgement:
+		// Consume acknowledgements without sending another acknowledgement back.
 		r.tracker.Acknowledgement(p)
 		return nil, true
 
@@ -67,6 +74,8 @@ func (r *Router) handleMessage(message protocol.Message) func() error {
 
 	case protocol.TypeTelemetry:
 		return func() error {
+			// Link this telemetry response to the original request so the ESP32
+			// can resolve the correct pending operation.
 			response, err := r.telemetry.Collect()
 			if err != nil {
 				return err

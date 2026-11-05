@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# Agent binaries are published as releases in the parent BMC repository.
+# Requires curl, jq, sha256sum, and a token with access to its release assets.
 REPO="CiaranW005/BMC"
 TOKEN_FILE="/etc/bmc-agent/github-token"
 INSTALL_PATH="/usr/local/bin/bmc-agent"
@@ -50,7 +52,7 @@ download_asset() {
 download_asset "$BINARY_ID" "$TMP_DIR/bmc-agent"
 download_asset "$CHECKSUM_ID" "$TMP_DIR/bmc-agent.sha256"
 
-# Verify the binary.
+# The checksum file names bmc-agent relative to the current directory.
 cd "$TMP_DIR"
 sha256sum --check bmc-agent.sha256
 
@@ -65,11 +67,11 @@ echo "Installing updated PC Agent..."
 # Stage and install the executable.
 install -m 755 bmc-agent /usr/local/bin/.bmc-agent.new
 
-# Keep the previous version.
 if [[ -f "$INSTALL_PATH" ]]; then
     cp -p "$INSTALL_PATH" /usr/local/bin/bmc-agent.previous
 fi
 
+# Replace the executable by renaming within the same filesystem.
 mv -f /usr/local/bin/.bmc-agent.new "$INSTALL_PATH"
 
 echo "PC Agent updated successfully."
